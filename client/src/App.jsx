@@ -1,13 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
+import VideoCall from './VideoCall.jsx'
 
 const socket = io(import.meta.env.VITE_SERVER_URL || 'http://localhost:3001')
+const SESSION_MESSAGES_KEY = 'chatMessages'
+
+function getStoredMessages() {
+	const storedMessages = sessionStorage.getItem(SESSION_MESSAGES_KEY)
+	if (!storedMessages) return []
+
+	try {
+		const parsedMessages = JSON.parse(storedMessages)
+		return Array.isArray(parsedMessages)
+			? parsedMessages.filter((item) => typeof item === 'string')
+			: []
+	} catch (error) {
+		console.warn('Could not parse saved chat messages from session storage.', error)
+		return []
+	}
+}
 
 function App() {
 	const [message, setMessage] = useState('')
-	const [messages, setMessages] = useState([])
+	const [messages, setMessages] = useState(getStoredMessages)
 	const [connected, setConnected] = useState(socket.connected)
 	const inputRef = useRef(null)
+
+	useEffect(() => {
+		sessionStorage.setItem(SESSION_MESSAGES_KEY, JSON.stringify(messages))
+	}, [messages])
 
 	useEffect(() => {
 		const receiveMessage = (newMessage) => {
@@ -50,6 +71,8 @@ function App() {
 					<span className="status"><i /> {connected ? 'connected' : 'disconnected'}</span>
 				</header>
 
+				<VideoCall socket={socket} />
+
 				<div className="messages" aria-live="polite">
 					{messages.length === 0 ? (
 						<div className="empty-state">
@@ -83,6 +106,4 @@ function App() {
 }
 
 export default App
-
-
 
